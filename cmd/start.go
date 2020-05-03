@@ -10,7 +10,7 @@ type Start struct {
 }
 
 func (*Start) Name() string {
-	return "start [container id]"
+	return "start"
 }
 
 func (*Start) Synopsis() string {

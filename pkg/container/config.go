@@ -1,6 +1,7 @@
 package container
 
 import (
+	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/terassyi/mycon/pkg/spec"
 )
@@ -21,4 +22,11 @@ func NewConfig(id string, bundle string) (*Config, error) {
 		Bundle: bundle,
 		Spec:   s,
 	}, nil
+}
+
+func (config *Config) String() string {
+	return fmt.Sprintf("config\n"+
+		"	id: %v\n"+
+		"	bundle: %v\n"+
+		"	spec: %v\n", config.Id, config.Bundle, config.Spec)
 }

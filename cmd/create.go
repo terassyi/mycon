@@ -15,7 +15,7 @@ type Create struct {
 }
 
 func (*Create) Name() string {
-	return "create [container id]"
+	return "create"
 }
 
 func (*Create) Synopsis() string {
@@ -28,23 +28,29 @@ func (*Create) Usage() string {
 }
 
 func (c *Create) SetFlags(f *flag.FlagSet) {
-	flag.StringVar(&c.bundle, "bundle", "", "bundle directory")
+	f.StringVar(&c.bundle, "bundle", "", "bundle directory")
 }
 
 func (c *Create) Execute(_ context.Context, flag *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	logrus.Debugf("new container create")
-	f, err := factory.New("")
+	id := flag.Arg(0)
+	f, err := factory.New(id, "")
 	if err != nil {
+		logrus.Debug(err)
 		return subcommands.ExitFailure
 	}
-	id := flag.Arg(1)
+
 	config, err := container.NewConfig(id, c.bundle)
 	if err != nil {
+		logrus.Debug(err)
 		return subcommands.ExitFailure
 	}
-	_, err = f.Create(id, config)
+	logrus.Debug(config.String())
+	logrus.Debugf("new container create id=%v", id)
+	_, err = f.Create(config)
 	if err != nil {
+		logrus.Debug(err)
 		return subcommands.ExitFailure
 	}
+	logrus.Debugf("return success")
 	return subcommands.ExitSuccess
 }

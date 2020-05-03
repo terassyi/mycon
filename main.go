@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/terassyi/mycon/cmd"
 	"os"
-	"syscall"
 )
 
 var (
@@ -30,21 +29,9 @@ func main() {
 
 	flag.Parse()
 	setDebugMode(debug)
-	// Call the subcommand and pass in the configuration.
-	var ws syscall.WaitStatus
-	subcmdCode := subcommands.Execute(context.Background(), &ws)
-	if subcmdCode == subcommands.ExitSuccess {
-		logrus.Debugf("Exiting with status: %v", ws)
-		if ws.Signaled() {
-			// No good way to return it, emulate what the shell does. Maybe raise
-			// signall to self?
-			os.Exit(128 + int(ws.Signal()))
-		}
-		os.Exit(ws.ExitStatus())
-	}
-	// Return an error that is unlikely to be used by the application.
-	logrus.Warningf("Failure to execute command, err: %v", subcmdCode)
-	os.Exit(128)
+
+	ctx := context.Background()
+	os.Exit(int(subcommands.Execute(ctx)))
 }
 
 func setDebugMode(debug bool) {
