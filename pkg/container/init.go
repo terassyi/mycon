@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
+	"github.com/terassyi/mycon/pkg/cgroups"
 	"golang.org/x/sys/unix"
 	"os"
 	"os/exec"
@@ -15,16 +16,22 @@ const (
 )
 
 type Initializer struct {
-	Id     string
-	FifoFd int
-	Spec   *specs.Spec
+	Id      string
+	FifoFd  int
+	Spec    *specs.Spec
+	Cgroups *cgroups.Cgroups
 }
 
 func NewInitializer(spec *specs.Spec, fd int, id string) (*Initializer, error) {
+	cg, err := cgroups.New(spec.Linux.Resources)
+	if err != nil {
+		return nil, err
+	}
 	return &Initializer{
-		Id:     id,
-		FifoFd: fd,
-		Spec:   spec,
+		Id:      id,
+		FifoFd:  fd,
+		Spec:    spec,
+		Cgroups: cg,
 	}, nil
 }
 
@@ -33,6 +40,9 @@ func (i *Initializer) Init() error {
 		logrus.Debug(err)
 		return err
 	}
+	//if err := i.Cgroups.Limit(); err != nil {
+	//	return err
+	//}
 	name, err := exec.LookPath(i.Spec.Process.Args[0])
 	if err != nil {
 		logrus.Debugf("cannot find container exec command: %v", err)
@@ -90,6 +100,9 @@ func (i *Initializer) prepareRootfs() error {
 	//	return err
 	//}
 	//logrus.Debugf("chdir: %v", i.Spec.Root.Path)
+	if err := i.Cgroups.Limit(); err != nil {
+		return err
+	}
 	// pivot_root
 	if err := i.pivotRoot(); err != nil {
 		logrus.Debugf("failed to pivot_root: %v", err)
