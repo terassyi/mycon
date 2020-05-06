@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
+	"github.com/terassyi/mycon/pkg/capabilities"
 	"github.com/terassyi/mycon/pkg/cgroups"
 	"golang.org/x/sys/unix"
 	"os"
@@ -16,10 +17,11 @@ const (
 )
 
 type Initializer struct {
-	Id      string
-	FifoFd  int
-	Spec    *specs.Spec
-	Cgroups *cgroups.Cgroups
+	Id           string
+	FifoFd       int
+	Spec         *specs.Spec
+	Cgroups      *cgroups.Cgroups
+	Capabilities *capabilities.Capabilities
 }
 
 func NewInitializer(spec *specs.Spec, fd int, id string) (*Initializer, error) {
@@ -27,11 +29,19 @@ func NewInitializer(spec *specs.Spec, fd int, id string) (*Initializer, error) {
 	if err != nil {
 		return nil, err
 	}
+	var caps *capabilities.Capabilities
+	if spec.Process.Capabilities != nil {
+		caps, err = capabilities.New(spec.Process.Capabilities)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &Initializer{
-		Id:      id,
-		FifoFd:  fd,
-		Spec:    spec,
-		Cgroups: cg,
+		Id:           id,
+		FifoFd:       fd,
+		Spec:         spec,
+		Cgroups:      cg,
+		Capabilities: caps,
 	}, nil
 }
 
@@ -43,6 +53,10 @@ func (i *Initializer) Init() error {
 	//if err := i.Cgroups.Limit(); err != nil {
 	//	return err
 	//}
+	if err := i.Capabilities.ApplyCaps(); err != nil {
+		logrus.Debugf("failed to apply capabilities")
+		return err
+	}
 	name, err := exec.LookPath(i.Spec.Process.Args[0])
 	if err != nil {
 		logrus.Debugf("cannot find container exec command: %v", err)
